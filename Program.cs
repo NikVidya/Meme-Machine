@@ -13,13 +13,12 @@ namespace memeMachine
         private Reddit reddit;
 
         public static void Main(string[] args)
-             => new Program().MainAsync().GetAwaiter().GetResult();
+             => new Program().MainAsync(args).GetAwaiter().GetResult();
 
-        public async Task MainAsync()
+        public async Task MainAsync(string[] args)
         {
-            Console.WriteLine("Hello World!");
             _client = new Discord.WebSocket.DiscordSocketClient();
-            string token = "***REMOVED***";
+            string token = args[0];
             _client.Ready += ScrapeReddit;
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();

@@ -11,8 +11,11 @@ namespace memeMachine
     {
         private Discord.WebSocket.DiscordSocketClient _client;
         private ulong cancerhub = 235280679871578113;
+        
 
         private Reddit reddit;
+
+        private String subredditName = "";
 
         public static void Main(string[] args)
              => new Program().MainAsync(args).GetAwaiter().GetResult();
@@ -21,9 +24,11 @@ namespace memeMachine
         {
             _client = new Discord.WebSocket.DiscordSocketClient();
             string token = args[0];
+            subredditName = args[1];
             _client.Ready += ScrapeReddit;
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
+            await Log("Logged in");
             await Task.Delay(-1);
         }
 
@@ -31,16 +36,28 @@ namespace memeMachine
         {
             reddit = new Reddit();
             var channel = _client.GetChannel(cancerhub) as Discord.WebSocket.SocketTextChannel;
+            await Log("Got Channel");
             if (channel == null)
             {
                 await Log("Could not find memeMachine");
                 return;
             }
             var subreddit = reddit.GetSubreddit("/r/youtubehaiku");
+            await Log("Created subreddit var");
+            switch (subredditName)
+            {
+                case "":
+                    subreddit = reddit.GetSubreddit("/r/youtubehaiku");
+                    break;
+                default:
+                    subreddit = reddit.GetSubreddit("/r/" + subredditName);
+                    break;
+            }
+            await Log("Got subreddit");
             var urlList = new List<string>();
             foreach (var post in subreddit.Hot.GetListing(5))
             {
-                if (isItAYoutube(post.Url.ToString()))
+                if (isAYoutube(post.Url.ToString()))
                 {
                     urlList.Add(post.Url.ToString());
                 }
@@ -51,7 +68,7 @@ namespace memeMachine
                 await Log(post.Url.ToString());
             }
             string s = string.Join(" ", urlList.ToArray());
-            await channel.SendMessageAsync("ANALYZING MEMESPACE... DONE\n " + s);
+            await channel.SendMessageAsync("RETRIEVING MEMES FROM /r/" + subredditName + "... DONE\n " + s);
             await _client.LogoutAsync();
         }
 
@@ -60,7 +77,7 @@ namespace memeMachine
             Console.WriteLine(msg.ToString());
             return Task.CompletedTask;
         }
-        private bool isItAYoutube(string matchme)
+        private bool isAYoutube(string matchme)
         {
             // string pattern = "#^(?:https?://)?";    // Optional Url scheme. Either http or https
             // pattern += "(?:www\\.)?";               // Optional www subdomain
@@ -79,7 +96,7 @@ namespace memeMachine
             // Console.WriteLine(pattern);
             // var regex = new Regex(pattern);
             // return regex.IsMatch(matchme);
-            return (!matchme.Contains("reddit"));
+            return (!matchme.Contains("redd"));
         }
     }
 }

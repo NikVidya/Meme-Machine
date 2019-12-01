@@ -1,102 +1,26 @@
-﻿using System;
-using RedditSharp;
-using Discord;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 
-namespace memeMachine
+namespace MemeMachine
 {
     class Program
     {
-        private Discord.WebSocket.DiscordSocketClient _client;
-        private ulong cancerhub = 235280679871578113;
-        
-
-        private Reddit reddit;
-
-        private String subredditName = "";
-
+        public static IConfiguration ProjectConfiguration;
+        public static string Token;
         public static void Main(string[] args)
-             => new Program().MainAsync(args).GetAwaiter().GetResult();
-
-        public async Task MainAsync(string[] args)
         {
-            _client = new Discord.WebSocket.DiscordSocketClient();
-            string token = args[0];
-            subredditName = args[1];
-            _client.Ready += ScrapeReddit;
-            await _client.LoginAsync(TokenType.Bot, token);
-            await _client.StartAsync();
-            await Log("Logged in");
-            await Task.Delay(-1);
+            Token = args[0];
+            ProjectConfiguration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+            CreateHostBuilder(args).Build().Run();
         }
-
-        private async Task ScrapeReddit()
+        public static IHostBuilder CreateHostBuilder(string[] args)
         {
-            reddit = new Reddit();
-            var channel = _client.GetChannel(cancerhub) as Discord.WebSocket.SocketTextChannel;
-            await Log("Got Channel");
-            if (channel == null)
-            {
-                await Log("Could not find memeMachine");
-                return;
-            }
-            var subreddit = reddit.GetSubreddit("/r/youtubehaiku");
-            await Log("Created subreddit var");
-            switch (subredditName)
-            {
-                case "":
-                    subreddit = reddit.GetSubreddit("/r/youtubehaiku");
-                    break;
-                default:
-                    subreddit = reddit.GetSubreddit("/r/" + subredditName);
-                    break;
-            }
-            await Log("Got subreddit");
-            var urlList = new List<string>();
-            foreach (var post in subreddit.Hot.GetListing(5))
-            {
-                if (isAYoutube(post.Url.ToString()))
+            return Host.CreateDefaultBuilder(args)
+                .ConfigureServices((hostContext, services) =>
                 {
-                    urlList.Add(post.Url.ToString());
-                }
-                else
-                {
-                    await Log(channel.Name);
-                }
-                await Log(post.Url.ToString());
-            }
-            string s = string.Join(" ", urlList.ToArray());
-            await channel.SendMessageAsync("RETRIEVING MEMES FROM /r/" + subredditName + "... DONE\n " + s);
-            await _client.LogoutAsync();
-        }
-
-        private Task Log(String msg)
-        {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
-        }
-        private bool isAYoutube(string matchme)
-        {
-            // string pattern = "#^(?:https?://)?";    // Optional Url scheme. Either http or https
-            // pattern += "(?:www\\.)?";               // Optional www subdomain
-            // pattern += "(?:";                       // Hosts group:
-            // pattern += "youtu\\.be/";               //   Either youtu.be, 
-            // pattern += "|youtube\\.com";            //   or youtube.com 
-            // pattern += "(?:";                       //   Paths group: 
-            // pattern += "/embed/";                   //     Either /embed/, 
-            // pattern += "|/v/";                      //	   or /v/,
-            // pattern += "|/watch\\?v=";              //     or /watch?v=, 
-            // pattern += "|/watch\\?.+&v=";           //     or /watch?other_param&v= 
-            // pattern += ")";                         //   End paths group. 
-            // pattern += ")";                         // End hosts group.
-            // pattern += "([\\w-]{11})";              // 11 characters (Length of Youtube video ids).
-            // pattern += "(?:.+)?$#x";	               // Optional other ending URL parameters.
-            // Console.WriteLine(pattern);
-            // var regex = new Regex(pattern);
-            // return regex.IsMatch(matchme);
-            return (!matchme.Contains("redd"));
+                    services.AddHostedService<Worker>();
+                });
         }
     }
 }

@@ -16,6 +16,7 @@ namespace MemeMachine
         public Task StartAsync(CancellationToken stopToken)
         {
             new Worker().MainAsync().GetAwaiter().GetResult();
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken stopToken)
